@@ -129,10 +129,9 @@ def schedule(bot,update,job_queue,user_data):
 
 def topics(bot,update,user_data):
     reply = 'Please select a topic by typing corresponding number.\n'
-    i = 1
-    for topic in TOPIC_NAMES:
-        reply += ('{0}. {1}\n'.format(i,topic))
-        i += 1
+    n = range(1,len(TOPIC_NAMES ) + 1)
+    reply_list = list(map(lambda i,t: '{0}. {1}'.format(i,t),n,TOPIC_NAMES))
+    reply += '\n'.join(reply_list)
     reply_markup = ReplyKeyboardMarkup(QUESTIONS_KEYBOARD)
     bot.send_message(chat_id=update.message.chat_id,text=reply,
                              reply_markup=reply_markup)
@@ -145,7 +144,7 @@ def show_questions(bot,update,user_data):
     reply = ''
     if match:
         choice = int(match.group())
-        if choice < (len(TOPIC_NAMES) + 1) and choice > 0:
+        if 0 < choice < (len(TOPIC_NAMES) + 1):
             selected_topic = TOPIC_NAMES[int(text)-1]
             logging.info('User {0} selected topic {1}'.format(update.effective_user.id,selected_topic))
             user_data['topic'] = selected_topic
@@ -170,7 +169,7 @@ def show_answer(bot,update,user_data):
     if match:
         choice = int(match.group())
         topic = user_data['topic']
-        if choice > 0 and choice < len(qas[topic])+1:
+        if 0 < choice < len(qas[topic])+1:
             qa = qas[topic][choice-1]
             a = '\n'.join(qa[1])
             reply = 'Topic: {0}\nQ: {1}\nA: {2}'.format(topic,qa[0],a)
