@@ -22,6 +22,7 @@ SOFTWARE.'''
 from telegram.ext import Updater
 from telegram.ext import CommandHandler, MessageHandler, ConversationHandler
 from telegram.ext import Filters, RegexHandler
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 
 from datetime import datetime
 from functools import wraps
@@ -58,6 +59,9 @@ date_pattern = re.compile('^(\d\d?):(\d\d?) (\d\d?) (January|February|March'
                             + '|October|November|December) (\d\d\d\d)$') 
 
 TOPIC_NAMES = ['Налоги', 'Бюджет', 'Политика', 'Рынки', 'Организации']
+
+QUESTIONS_KEYBOARD = [['1','2','3'],['4','5','6'],
+                      ['7','8','9'],['Back','Cancel']]
 
 #Building question database
 qa_filename = 'sample_questions.json'
@@ -129,7 +133,9 @@ def topics(bot,update,user_data):
     for topic in TOPIC_NAMES:
         reply += ('{0}. {1}\n'.format(i,topic))
         i += 1
-    bot.send_message(chat_id=update.message.chat_id,text=reply)
+    reply_markup = ReplyKeyboardMarkup(QUESTIONS_KEYBOARD)
+    bot.send_message(chat_id=update.message.chat_id,text=reply,
+                             reply_markup=reply_markup)
     return SELECT_TOPIC
 
 def show_questions(bot,update,user_data):
@@ -148,6 +154,7 @@ def show_questions(bot,update,user_data):
                 questions[i-1] = '{0}. {1}'.format(i,questions[i-1])
             qs = '\n'.join(questions)
             reply = 'Topic: {0}\nSelect a question by typing corresponding number.\nQuestions:\n{1}'.format(selected_topic, qs)
+            bot.send_message(chat_id=update.message.chat_id,text=reply)
         else:
             bot.send_message(chat_id=update.message.chat_id,text='Invalid number, try again!')
             return SELECT_TOPIC
@@ -167,12 +174,12 @@ def show_answer(bot,update,user_data):
             qa = qas[topic][choice-1]
             a = '\n'.join(qa[1])
             reply = 'Topic: {0}\nQ: {1}\nA: {2}'.format(topic,qa[0],a)
-            bot.send_message(chat_id=update.message.chat_id,text = reply) 
+            bot.send_message(chat_id=update.message.chat_id,text=reply,reply_markup=ReplyKeyboardRemove())
         else:
-            update.reply_text('Invalid number, try again!')
+            update.message.reply_text('Invalid number, try again!')
             return SELECT_QUESTION
     else:
-        bot.reply_text('Please enter a number!')
+        update.message.reply_text('Please enter a number!')
     return -1
 
 def fb(bot,update,user_data):
@@ -181,7 +188,7 @@ def fb(bot,update,user_data):
 
 def error(bot,update,error):
     logger.warning('Update "%s" caused error "%s"',update,error)
-    update.reply_text('An internal error occured. The bot may be out of operation')
+    update.message.reply_text('An internal error occured. The bot may be out of operation')
 
 def main():
     start_handler = CommandHandler('start',start)
