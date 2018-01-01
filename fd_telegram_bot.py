@@ -1,5 +1,5 @@
 '''
-Copyright (c) 2017 Fedor Chervyakov, Daniil Chentyrev
+Copyright (c) 2017 Fedor Chervyakov, Daniel Chentyrev
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,9 @@ import logging
 import re
 import json
 import codecs
+import os
+import sys
+from threading import Thread
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                             level=logging.INFO)
@@ -187,10 +190,10 @@ def fb(bot,update,user_data):
 
 def error(bot,update,error):
     logger.warning('Update "%s" caused error "%s"',update,error)
-    update.message.reply_text('An internal error occured. The bot may be out of operation')
 
 def main():
     start_handler = CommandHandler('start',start)
+
     download_handler = MessageHandler(Filters.document, download_file, pass_user_data=True)
     schedule_handler = MessageHandler(Filters.text,schedule,pass_job_queue=True,pass_user_data=True)
     upload_handler = ConversationHandler(
@@ -206,6 +209,17 @@ def main():
                 SELECT_TOPIC : [MessageHandler(Filters.text,show_questions,pass_user_data=True)],
                 SELECT_QUESTION : [MessageHandler(Filters.text, show_answer, pass_user_data=True)]},
             fallbacks=[CommandHandler('cancel',fb,pass_user_data=True)])
+    
+    def stop_and_restart():
+        updater.stop()
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    def restart(bot,update):
+        update.message.reply_text('Bot is restarting...')
+        logger.info('Bot is restarting.')
+        Thread(target=stop_and_restart).start()
+    
+    dispatcher.add_handler(CommandHandler('r',restart,filters=Filters.user(username='@theodor3k')))
     dispatcher.add_handler(qa_handler)
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(upload_handler) 
