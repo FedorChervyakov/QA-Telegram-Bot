@@ -24,6 +24,7 @@ from telegram.ext import CommandHandler, MessageHandler, ConversationHandler
 from telegram.ext import Filters, RegexHandler
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
 
+from time import time, sleep
 from datetime import datetime
 from functools import wraps
 import logging
@@ -32,7 +33,8 @@ import json
 import codecs
 import os
 import sys
-from threading import Thread
+from threading import Thread, Event
+import pickle
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                             level=logging.INFO)
@@ -50,6 +52,9 @@ TOKEN = '427077063:AAE52Z42kce-qFSa6Vw9UZcs0CMHAGbc_UQ'
 CHANNEL_ID = -1001100253926
 
 LIST_OF_ADMINS = [219630622,392783281]
+
+CONVERSATIONS_PATH = 'backup/conversations'
+USERDATA_PATH = 'backup/user_data'
 
 SCHEDULE = range(1)
 SELECT_TOPIC, SELECT_QUESTION = range(2)
@@ -111,9 +116,6 @@ def download_file(bot, update, user_data):
 def publish_file(bot,job):
     logger.info('publish file job context: %s' % job.context)
     bot.send_document(chat_id=CHANNEL_ID, document=job.context)
-
-def error(bot, update, error):
-    logger.warn('Update "%s" caused error "%s"' % (update, error))
 
 @restricted
 def schedule(bot,update,job_queue,user_data):
@@ -188,10 +190,45 @@ def fb(bot,update,user_data):
     del user_data
     return -1
 
+def loadData(conv_handler):
+    try:
+        with open(CONVERSATIONS_PATH, 'rb') as f:
+            conv_handler.conversations = pickle.load(f)
+        with open(USERDATA_PATH,'rb') as f:
+            dispatcher.user_data = pickle.load(f)
+    except FileNotFoundError:
+        logging.error("Data file not found")
+    except:
+        logging.error(repr(sys.exc_info()[0]))
+
+def saveData(conv_handler):
+    while True:
+        sleep(60)
+
+        resolved = dict()
+        for k, v in conv_handler.conversations.items():
+            if isinstance(v, tuple) and len(v) is 2 and isinstance(v[1], Promise):
+                try:
+                    new_state = v[1].result()
+                except:
+                    new_state = v[0]
+                resolved[k] = new_state
+            else:
+                resolved[k] = v
+
+        try:
+            with open(CONVERSATIONS_PATH, 'wb+') as f:
+                pickle.dump(resolved, f)
+            with open(USERDATA_PATH, 'wb+') as f:
+                pickle.dump(dispatcher.user_data, f)
+        except:
+            logging.exception(sys.exc_info()[0])
+
 def error(bot,update,error):
     logger.warning('Update "%s" caused error "%s"',update,error)
 
 def main():
+
     start_handler = CommandHandler('start',start)
 
     download_handler = MessageHandler(Filters.document, download_file, pass_user_data=True)
@@ -210,6 +247,11 @@ def main():
                 SELECT_QUESTION : [MessageHandler(Filters.text, show_answer, pass_user_data=True)]},
             fallbacks=[CommandHandler('cancel',fb,pass_user_data=True)])
     
+    loadData(upload_handler)
+    loadData(qa_handler)
+    thrd1 = Thread(target=saveData,args=[qa_handler]).start()
+    thrd2 = Thread(target=saveData,args=[upload_handler]).start()
+
     def stop_and_restart():
         updater.stop()
         os.execl(sys.executable, sys.executable, *sys.argv)
@@ -227,6 +269,6 @@ def main():
     
     updater.start_polling()
     updater.idle()
-
+    
 if __name__ == '__main__':
     main()
