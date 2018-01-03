@@ -72,7 +72,7 @@ QUESTIONS_KEYBOARD = [['1','2','3'],['4','5','6'],
                       ['7','8','9'],['Back','Cancel']]
 
 #Building question database
-qa_filename = 'sample_questions.json'
+qa_filename = os.path.join('qa_data','sample_questions.json')
 qas = dict()
 for n in TOPIC_NAMES:
     qas[n] = list()
@@ -105,7 +105,7 @@ def download_file(bot, update, user_data):
     file_id = update.message.document.file_id
     file_name = update.message.document.file_name
     newFile = bot.get_file(file_id)
-    newFile.download(custom_path=('data/' + file_name))
+    newFile.download(custom_path=(os.path.join('downloaded_data',file_name)))
     user_data['file_name'] = file_name
     user_data['file_id'] = file_id
     logger.info('File %s downloaded.' % file_id)
