@@ -23,13 +23,19 @@ APPLICATION_NAME = 'QA Telegram Bot'
 SPREADSHEET_ID = '1L_-zGLY4IJhdKiqkooS_vMMmls1fkWN3XtUHz5lzW0A'
 
 def parse_questions(sheet):
-    data = sheet['data']
-    row_data = [k['rowData'] for k in data]
-    values = [r for r in row_data]
-    cell_data = [v['effectiveValue'] for v in values]
-    logging.info('row_data length: %d' % len(row_data))
-    logging.info('cell_data length: %d' % len(cell_data))
-    #logging.info(json.dumps(sheets,sort_keys=True,indent=4))
+    row_data = sheet['data'][0]['rowData'] # Array of rows
+    for row in row_data:
+        cells = []
+        for cell in row['values']:
+            if 'effectiveValue' in cell.keys():
+                value = list(cell['effectiveValue'].values())
+                cells.append([value[0]])
+                if 'effectiveFormat' in cell.keys():
+                    cells[-1].append(cell['effectiveFormat']['backgroundColor'])
+            else:
+                cells.append('')
+            #logging.info(cell.keys())
+        logging.info(cells)            
 
 class API(object):
     
@@ -77,11 +83,11 @@ class API(object):
         self.service = self.create_service()
         self.logger = logging.getLogger(__name__)
 
-    def read_spreadsheet_data(self, spreadsheet_id):
+    def read_spreadsheet_data(self, spreadsheet_id,ranges):
         '''
         Returns data from spreadsheet
         '''
-        ranges = ['A1:E30']
+        ranges = ['A3:E100']
         include_grid_data = True
         request = self.service.spreadsheets().get(spreadsheetId=spreadsheet_id,
                                                   ranges=ranges, includeGridData=include_grid_data)
@@ -91,7 +97,7 @@ class API(object):
 
 def main():
     api = API()
-    spreadsheet = api.read_spreadsheet_data(SPREADSHEET_ID)
+    spreadsheet = api.read_spreadsheet_data(SPREADSHEET_ID, ['A3:E100'])
     questions = parse_questions(spreadsheet['sheets'][0])
     
 
