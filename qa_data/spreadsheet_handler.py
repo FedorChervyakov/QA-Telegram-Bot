@@ -8,8 +8,6 @@ from apiclient import discovery
 from oauth2client import client, tools
 from oauth2client.file import Storage
 
-logging.basicConfig(level='INFO')
-
 try:
     import argparse
     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
@@ -20,10 +18,9 @@ SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'QA Telegram Bot'
 
-SPREADSHEET_ID = '1L_-zGLY4IJhdKiqkooS_vMMmls1fkWN3XtUHz5lzW0A'
-
 def parse_questions(sheet):
     row_data = sheet['data'][0]['rowData'] # Array of rows
+    data = []
     for row in row_data:
         cells = []
         for cell in row['values']:
@@ -34,8 +31,8 @@ def parse_questions(sheet):
                     cells[-1].append(cell['effectiveFormat']['backgroundColor'])
             else:
                 cells.append('')
-            #logging.info(cell.keys())
-        logging.info(cells)            
+        data.append(cells)
+    return data
 
 class API(object):
     
@@ -87,7 +84,6 @@ class API(object):
         '''
         Returns data from spreadsheet
         '''
-        ranges = ['A3:E100']
         include_grid_data = True
         request = self.service.spreadsheets().get(spreadsheetId=spreadsheet_id,
                                                   ranges=ranges, includeGridData=include_grid_data)
@@ -97,7 +93,7 @@ class API(object):
 
 def main():
     api = API()
-    spreadsheet = api.read_spreadsheet_data(SPREADSHEET_ID, ['A3:E100'])
+    spreadsheet = api.read_spreadsheet_data(SPREADSHEET_ID, ['2. Система!A3:E100'])
     questions = parse_questions(spreadsheet['sheets'][0])
     
 
