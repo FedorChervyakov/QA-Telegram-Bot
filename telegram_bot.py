@@ -39,17 +39,21 @@ import pickle
 
 from qa_data.database import Database
 
+'''
+    Logging configuration
+'''
+_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+logging.basicConfig(format=_format,level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 fh = RotatingFileHandler('telegram_bot.log',maxBytes=16384)
 fh.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
+fh.setFormatter(logging.Formatter(_format))
 logger.addHandler(fh)
 
 sh = logging.StreamHandler()
-sh.setLevel(logging.WARNING)
-sh.setFormatter(formatter)
+sh.setLevel(logging.INFO)
+sh.setFormatter(logging.Formatter(_format))
 logger.addHandler(sh)
 
 
@@ -60,7 +64,10 @@ DOWNLOAD_FILE_TEXT = ('You have uploaded file to the server. Your next step is '
                     + 'hh:mm dd Month yyyy')
 DATE_FORMAT_ERR_TEXT = 'You are using incorrect formatting. TRY AGAIN. Your reply should look like this: 4:20 26 December 2017'
 
-TOKEN = '427077063:AAE52Z42kce-qFSa6Vw9UZcs0CMHAGbc_UQ'
+
+with open('.secret/TOKEN','r+') as f:
+    TOKEN = f.read()[:-1]
+
 CHANNEL_ID = -1001100253926
 CHANNEL_INVITE_LINK = 'https://t.me/joinchat/AAAAAEGUiubGLELh-MwPWA'
 
@@ -88,7 +95,7 @@ db = Database(DATABASE_PATH)
 
 TOPIC_NAMES = db.get_unique_topics()
 
-
+logger.info(TOKEN)
 updater = Updater(TOKEN)
 dispatcher = updater.dispatcher
 job_queue = updater.job_queue
