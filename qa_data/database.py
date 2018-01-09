@@ -1,9 +1,12 @@
 
-from qa_data.spreadsheet_api import API, parse_questions
-
 import logging
 import sqlite3 as lite
 import sys
+
+def tokenize_question(question):
+    q_list = question.split(' ')
+    tokens = [s[:-2] if len(s) > 3 else s for s in q_list]
+    return tokens
 
 class Database(object):
     
@@ -15,7 +18,9 @@ class Database(object):
                         group_id TEXT, author TEXT, question TEXT)''')
             cur.execute('''CREATE TABLE IF NOT EXISTS answers
                         (question_id INTEGER, answer TEXT)''')   
-
+            cur.execute('''CREATE TABLE IF NOT EXISTS tokens
+                        (question_ID INTEGER, token TEXT)''')
+ 
 
     def __init__(self,database):
         ''' Constructor for question database.
@@ -24,8 +29,34 @@ class Database(object):
         self.PATH = database
         self.logger = logging.getLogger('Database')
         self._create_tables()
+
+    def clear_tables(self):
+        with lite.connect(self.PATH) as conn:
+            c = conn.cursor()
+            c.execute("DELETE FROM questions")
+            c.execute("DELETE FROM answers")
+            c.execute("VACUUM;")
+
+
+    def index_questions(self):
+        with lite.connect(self.PATH) as conn:
+            c = conn.cursor()
+            c.execute('select question,ID from questions')
+            questions = c.fetchall()
+            self.logger.info('There are {0} questions in the database.'.format(len(questions)))
+            for q in questions:
+                if q is None: 
+                    break
+                tokens = tokenize_question(q[0])
+                q_id = [q[1]] * len(tokens)
+                t = zip(q_id,tokens)
+                self.logger.debug('Tokenizing question number {0} to {1}'.format(q[1],', '.join(tokens)))
+                c.executemany("INSERT INTO tokens VALUES (?,?)", (t))
+                                               
     
     def add_question(self, question_d):
+        ''' This function is used only by spreasheet_api module.
+        ''' 
         try:
             with lite.connect(self.PATH) as conn:
                 c = conn.cursor()

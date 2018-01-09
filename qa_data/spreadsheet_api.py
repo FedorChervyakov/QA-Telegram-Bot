@@ -8,13 +8,19 @@ from apiclient import discovery
 from oauth2client import client, tools
 from oauth2client.file import Storage
 
+WHITE_RGB_D = {'red' : 1, 'green' : 1, 'blue' : 1}
+
+logging.basicConfig(level='INFO')
+
 try:
     import argparse
     flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
 except ImportError:
         flags = None
 
+
 def parse_questions(sheet):
+    logger = logging.getLogger('parse questions')
     row_data = sheet['data'][0]['rowData'] # Array of rows
     data = []
     for row in row_data:
@@ -22,13 +28,18 @@ def parse_questions(sheet):
         if len(row) == 0:
             continue
         for cell in row['values']:
+            # If cell has user-entered value, we 
+            # extract it's string representation here
             if 'effectiveValue' in cell.keys():
                 value = list(cell['effectiveValue'].values())
                 cells.append([value[0]])
                 if 'effectiveFormat' in cell.keys():
                     cells[-1].append(cell['effectiveFormat']['backgroundColor'])
+                else:
+                    cells[-1].append(WHITE_RGB_D)
+                    logger.debug('no effective format in this cell : {0}'.format(cell))
             else:
-                cells.append('')
+                cells.append(['',WHITE_RGB_D])
         data.append(cells)
     return data
 
@@ -59,7 +70,7 @@ class API(object):
                 credentials = tools.run_flow(flow, store, flags)
             else: # Needed only for compatibility with Python 2.6
                 credentials = tools.run(flow, store)
-            print('Storing credentials to ' + credential_path)
+            self.logger.info('Storing credentials to ' + credential_path)
         return credentials
 
 
