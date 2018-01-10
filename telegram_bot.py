@@ -125,6 +125,7 @@ def download_file(bot, update, user_data):
     if update.message.photo:
         photo = update.message.photo[-1]
         file_id = photo['file_id']
+        file_name = file_id
         user_data['file_name'] = 'photo' 
     elif update.message.document:
         file_name = update.message.document.file_name
@@ -196,7 +197,7 @@ def find_questions(bot,update,user_data):
 def show_questions(bot,update,user_data):
     text = update.message.text
     logger.debug(text)
-    questions = db.find_questions(user_data['topic'],text)
+    questions = db.search_questions(user_data['topic'],text)
     if not questions:
         bot.send_message(chat_id=update.message.chat_id,
                         text='Your search did not match any questions. Try again!')
@@ -219,9 +220,9 @@ def show_answer(bot,update,user_data):
     text = update.message.text
     match = re.match('(\d+)\.?',text)
     if match:
-        choice = int(match.group())
+        choice = int(match.group(0))
         topic = user_data['topic']
-        questions = db.find_questions(user_data['topic'],user_data['search_s'])
+        questions = db.search_questions(user_data['topic'],user_data['search_s'])
         logger.debug(questions)
         
         if 0 < choice < len(questions)+1:
@@ -268,7 +269,7 @@ def load_jobs(jq):
             if removed:
                 job._remove.set()
             next_t -= now  # Convert from absolute to relative time
-            jq.put(job, next_t)
+            jq.run_once(job, next_t)
 
 def save_jobs(jq):
     job_tuples = jq.queue.queue

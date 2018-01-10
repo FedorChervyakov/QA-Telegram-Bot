@@ -55,7 +55,7 @@ class Database(object):
                                                
     
     def add_question(self, question_d):
-        ''' This function is used only by spreasheet_api module.
+        ''' This function is used only with spreasheet_api module.
         ''' 
         try:
             with lite.connect(self.PATH) as conn:
@@ -72,16 +72,29 @@ class Database(object):
         except Exception as e:
             self.logger.exception(e)
     
-    def find_questions(self, topic, search_query):
-        self.logger.info('Search query: {0} Topic: {1}'.format(search_query,topic))
-        try: 
+    def search_questions(self,topic, search_query):
+        self.logger.info('Searching for {0}. Topic is {1}'.format(search_query, topic))
+        tokens = tokenize_question(search_query)
+        try:
             with lite.connect(self.PATH) as conn:
                 c = conn.cursor()
-                c.execute('''SELECT question, ID FROM questions WHERE
-                          topic = ? AND question LIKE ? ORDER BY ID''', (topic,'%' + search_query + '%'))
-                questions = c.fetchall()
-                self.logger.debug(questions)
-                return questions
+                
+                sql_query = '''
+                        select questions.question, questions.ID
+                        from questions
+                        inner join tokens on questions.ID=tokens.question_id
+                        where questions.topic=? and ( '''
+                tokens_l = ['%' + t + '%' for t in tokens]
+                tokens_s = str()
+                for t in tokens_l:
+                    string = 'tokens.token like \'{0}\' and '.format(t)
+                    tokens_s += string
+                tokens_s = tokens_s[:-5]
+                tokens_s += ')'
+                sql_query += tokens_s
+                c.execute(sql_query,(topic,))
+                return c.fetchall()
+
         except Exception as e:
             self.logger.exception(e)
 
