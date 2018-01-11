@@ -5,8 +5,8 @@ import sys
 
 def tokenize_question(question):
     q_list = question.split(' ')
-    tokens = [s[:-2] if len(s) > 3 else s for s in q_list]
-    return tokens
+    tokens = [s[:-2] if len(s) > 4 else s for s in q_list]
+    return [t.lower() for t in tokens]
 
 class Database(object):
     

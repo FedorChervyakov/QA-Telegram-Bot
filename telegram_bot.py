@@ -44,14 +44,16 @@ from qa_data.database import Database
     Logging configuration
 '''
 _format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-logging.basicConfig(format=_format,level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 fh = RotatingFileHandler('telegram_bot.log',maxBytes=8192)
 fh.setLevel(logging.INFO)
 fh.setFormatter(logging.Formatter(_format))
-logger.addHandler(fh)
 
+sh = logging.StreamHandler()
+
+logging.basicConfig(format=_format,level=logging.INFO,handlers=[fh,sh])
+
+logger = logging.getLogger(__name__)
 '''
     SOME USEFUL CONSTANTS
 '''
@@ -74,9 +76,13 @@ CHANNEL_INVITE_LINK = 'https://t.me/joinchat/AAAAAEGUiubGLELh-MwPWA'
 LIST_OF_ADMINS = [219630622,392783281]
 
 # Paths to various data
-CONVERSATIONS_PATH = os.path.join('backup','conversations')
-USERDATA_PATH = os.path.join('backup','user_data')
-JOBS_PICKLE = os.path.join('backup','job_tuples.pickle')
+backup_folder = 'backup'
+if backup_folder not in os.listdir():
+    os.makedirs(backup_folder, exist_ok=True)
+
+CONVERSATIONS_PATH = os.path.join(backup_folder,'conversations')
+USERDATA_PATH = os.path.join(backup_folder,'user_data')
+JOBS_PICKLE = os.path.join(backup_folder,'job_tuples.pickle')
 DATABASE_PATH = os.path.join('qa_data','questions.db')
 
 # ConversationHandler states
@@ -171,6 +177,10 @@ def topics(bot,update):
                              reply_markup=reply_markup)
     return SELECT_TOPIC
 
+def cancel_topics(bot,update):
+    update.message.reply_text('Canceling topic selection.',reply_markup=ReplyKeyboardRemove())
+    return -1
+
 def find_questions(bot,update,user_data):
     text = update.message.text
     logger.debug(text)
@@ -206,6 +216,10 @@ def show_questions(bot,update,user_data):
     logger.info('User {0} requested {1}'.format(update.effective_user.id,text))
     user_data['search_s'] = text
     q = [a[0] for a in questions]
+    if len(q) is 1:
+        update.message.text = '1'
+        show_answer(bot,update,user_data)    
+        return -1
     for i in range(1,len(q)+1):
         q[i-1] = '{0}. {1}'.format(i,q[i-1])
     qs = '\n'.join(q)
@@ -361,7 +375,8 @@ def main():
     qa_handler = ConversationHandler(
             entry_points=[topics_handler],
             states={
-                SELECT_TOPIC : [MessageHandler(Filters.text,find_questions,pass_user_data=True)],
+                SELECT_TOPIC : [RegexHandler('^(Cancel)$',cancel_topics),
+                                MessageHandler(Filters.text,find_questions,pass_user_data=True)],
                 FIND_QUESTIONS : [MessageHandler(Filters.text, show_questions, pass_user_data=True)],
                 SELECT_QUESTION : [MessageHandler(Filters.text, show_answer, pass_user_data=True)]},
             fallbacks=[CommandHandler('cancel',fb,pass_user_data=True)])
