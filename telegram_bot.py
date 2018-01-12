@@ -46,14 +46,11 @@ from qa_data.database import Database
 _format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 fh = RotatingFileHandler('telegram_bot.log',maxBytes=8192)
-fh.setLevel(logging.INFO)
-fh.setFormatter(logging.Formatter(_format))
-
 sh = logging.StreamHandler()
 
 logging.basicConfig(format=_format,level=logging.INFO,handlers=[fh,sh])
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('Telegram Bot')
 '''
     SOME USEFUL CONSTANTS
 '''
@@ -217,14 +214,14 @@ def show_questions(bot,update,user_data):
     user_data['search_s'] = text
     q = [a[0] for a in questions]
     if len(q) is 1:
-        update.message.text = '1'
+        update.message.text = '/1'
         show_answer(bot,update,user_data)    
         return -1
     for i in range(1,len(q)+1):
-        q[i-1] = '{0}. {1}'.format(i,q[i-1])
+        q[i-1] = '/{0}. {1}'.format(i,q[i-1])
     qs = '\n'.join(q)
-    reply = ('<b>Topic:</b> {0}\nSelect a question by typing ' 
-            + 'corresponding number.\n<b>Questions:</b>\n{1}').format(user_data['topic'], qs)
+    reply = ('<b>Topic:</b> {0}\nSelect a question by clicking on the' 
+            + 'corresponding command.\n<b>Questions:</b>\n{1}').format(user_data['topic'], qs)
     bot.send_message(chat_id=update.message.chat_id,text=reply,
                     reply_markup=ReplyKeyboardRemove(),
                     parse_mode=ParseMode.HTML)
@@ -232,9 +229,9 @@ def show_questions(bot,update,user_data):
 
 def show_answer(bot,update,user_data):
     text = update.message.text
-    match = re.match('(\d+)\.?',text)
+    match = re.match('/(\d+)',text)
     if match:
-        choice = int(match.group(0))
+        choice = int(match.group(1))
         topic = user_data['topic']
         questions = db.search_questions(user_data['topic'],user_data['search_s'])
         logger.debug(questions)
@@ -252,7 +249,7 @@ def show_answer(bot,update,user_data):
             update.message.reply_text('Invalid number, try again!')
             return SELECT_QUESTION
     else:
-        update.message.reply_text('Please enter a number!')
+        update.message.reply_text('Please use commands! Like this: /2')
         return SELECT_QUESTION
     return -1
 
@@ -378,7 +375,7 @@ def main():
                 SELECT_TOPIC : [RegexHandler('^(Cancel)$',cancel_topics),
                                 MessageHandler(Filters.text,find_questions,pass_user_data=True)],
                 FIND_QUESTIONS : [MessageHandler(Filters.text, show_questions, pass_user_data=True)],
-                SELECT_QUESTION : [MessageHandler(Filters.text, show_answer, pass_user_data=True)]},
+                SELECT_QUESTION : [RegexHandler('/(\d+)', show_answer, pass_user_data=True)]},
             fallbacks=[CommandHandler('cancel',fb,pass_user_data=True)])
     
     # Loading data from handler backups

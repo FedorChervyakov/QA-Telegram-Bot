@@ -2,6 +2,7 @@
 import logging
 import sqlite3 as lite
 import sys
+from functools import reduce
 
 def tokenize_question(question):
     q_list = question.split(' ')
@@ -78,22 +79,27 @@ class Database(object):
         try:
             with lite.connect(self.PATH) as conn:
                 c = conn.cursor()
+                ids = list()
+                for t in tokens:
+                    sql_query = '''
+                            select distinct questions.ID
+                            from questions
+                            inner join tokens on questions.ID=tokens.question_id
+                            where questions.topic=? and tokens.token like ?'''
+                    c.execute(sql_query,(topic,'%' + t + '%'))
+                    ids.append([q[0] for q in c.fetchall()])   
                 
-                sql_query = '''
-                        select questions.question, questions.ID
-                        from questions
-                        inner join tokens on questions.ID=tokens.question_id
-                        where questions.topic=? and ( '''
-                tokens_l = ['%' + t + '%' for t in tokens]
-                tokens_s = str()
-                for t in tokens_l:
-                    string = 'tokens.token like \'{0}\' and '.format(t)
-                    tokens_s += string
-                tokens_s = tokens_s[:-5]
-                tokens_s += ')'
-                sql_query += tokens_s
-                c.execute(sql_query,(topic,))
-                return c.fetchall()
+                qids = list()
+                if len(ids) is 1:
+                    qids = ids[0]
+                elif len(ids) > 1:
+                    qids = list(reduce(lambda t,l: set(t).intersection(l),ids))
+                
+                qids_s = ', '.join('?' for _ in qids)
+                sql_query_q = "select question, ID from questions where ID in ({0})".format(qids_s)
+
+                c.execute(sql_query_q, qids)
+                return  c.fetchall()
 
         except Exception as e:
             self.logger.exception(e)
