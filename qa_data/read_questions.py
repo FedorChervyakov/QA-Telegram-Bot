@@ -67,7 +67,10 @@ def build_question_dicts(formatted_questions,topic):
             qn = row[3][0]
             # checking if this is row with question title or the answer
             if group is not  '' and author is not '' and qn is not '':
-                qna.append({'topic': topic,'group' : group, 'author' : author, 'question' : qn, 'answers' : list()})
+                question_d = {'topic': topic,'group' : group, 'author' : author, 'question' : qn, 'answers' : list()}
+                if row[4][0] is not '':
+                    question_d['answers'].append(str(row[4][0]))
+                qna.append(question_d)
             # Checking if this row is the answer (i.e. green)
             elif row[3][1] == 'green':
                 # row 4 is column E in spreadsheet
@@ -104,6 +107,7 @@ def read_questions():
 
 
 def main():
+    read_questions()
     db.index_questions()  
 
 if __name__ == '__main__':

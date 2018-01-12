@@ -63,7 +63,8 @@ DATE_FORMAT_ERR_TEXT = 'You are using incorrect formatting. TRY AGAIN. Your repl
 
 # Reading token from secret file
 with open('.secret/TOKEN','r') as f:
-    TOKEN = f.read()[:-1]
+    TOKEN = str(f.read())[:-1]
+
 
 # Channel related constants
 CHANNEL_ID = -1001100253926
@@ -220,7 +221,7 @@ def show_questions(bot,update,user_data):
     for i in range(1,len(q)+1):
         q[i-1] = '/{0}. {1}'.format(i,q[i-1])
     qs = '\n'.join(q)
-    reply = ('<b>Topic:</b> {0}\nSelect a question by clicking on the' 
+    reply = ('<b>Topic:</b> {0}\nSelect a question by clicking on the ' 
             + 'corresponding command.\n<b>Questions:</b>\n{1}').format(user_data['topic'], qs)
     bot.send_message(chat_id=update.message.chat_id,text=reply,
                     reply_markup=ReplyKeyboardRemove(),
@@ -351,7 +352,11 @@ def restart(bot,update):
     Thread(target=stop_and_restart).start()
 
 def error(bot,update,error):
-    logger.exception('Update "%s" caused error "%s"',update,error)
+    if update is None:
+        return
+    else:
+        logger.exception('Update "%s" caused error "%s"',update,error)
+        logger.error('Update: %s',update)
 
 def main():
     
@@ -391,12 +396,10 @@ def main():
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(channel_handler)
     dispatcher.add_handler(upload_handler) 
-    dispatcher.add_error_handler(error)
+   #dispatcher.add_error_handler(error)
     
     job_queue.run_repeating(save_jobs_job,timedelta(minutes=1))
-    try: 
-        load_jobs(job_queue)
-
+    try: load_jobs(job_queue)
     except FileNotFoundError:
         pass
 
