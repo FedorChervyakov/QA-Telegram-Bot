@@ -50,7 +50,7 @@ sh = logging.StreamHandler()
 
 logging.basicConfig(format=_format,level=logging.INFO,handlers=[fh,sh])
 
-logger = logging.getLogger('Telegram Bot')
+logger = logging.getLogger(__name__)
 '''
     SOME USEFUL CONSTANTS
 '''
@@ -396,7 +396,7 @@ def main():
     dispatcher.add_handler(start_handler)
     dispatcher.add_handler(channel_handler)
     dispatcher.add_handler(upload_handler) 
-   #dispatcher.add_error_handler(error)
+    dispatcher.add_error_handler(error)
     
     job_queue.run_repeating(save_jobs_job,timedelta(minutes=1))
     try: load_jobs(job_queue)
